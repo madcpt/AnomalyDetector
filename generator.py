@@ -15,7 +15,7 @@ class Generator(object):
         self.l2_reg_lambda = config.l2_reg_lambda
         self.init_kernel = config.init_kernel
         
-    def generate_fake_sample(self, z_inp, is_training=False, getter=None, reuse=False, batch_size):
+    def generate_fake_sample(self, z_inp, is_training=False, getter=None, reuse=False, batch_size=None):
         """ Generator architecture in tensorflow
         Generates data from the latent space
         Args:

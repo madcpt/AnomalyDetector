@@ -130,7 +130,7 @@ with tf.Graph().as_default():
 
 #Adversarial training
 data_loader.reset_batch()
-real_data = tf.placeholder(tf.float32, shape=[None, generator_config.data_window, generator_config.feature_size, name="real_input")
+real_data = tf.placeholder(tf.float32, shape=[None, generator_config.data_window, generator_config.feature_size], name="real_input")  # stub
 is_training_pl = tf.placeholder(tf.bool, [], name='is_training_pl')
 learning_rate = tf.placeholder(tf.float32, shape=(), name="lr_pl")
 
@@ -140,7 +140,7 @@ batch_size = train_config.batch_size
 ema_decay = 0.9999
 
 random_z = tf.random_normal([batch_size*generator_config.data_window, latent_dim], mean=0.0, stddev=1.0, name='random_z')
-generated_data = generator.generate_fake_sample(random_z, is_training=is_training_pl, batch_size) #[batch_size, data_window, feature_size]
+generated_data = generator.generate_fake_sample(random_z, is_training=is_training_pl, batch_size=batch_size) #[batch_size, data_window, feature_size]
 real_lstm_outputs, real_loss = generator.classifier_network(real_data)
 fake_lstm_outputs, fake_loss = generator.classifier_network(generated_data) #[batch_size, sequence_length, hidden_size]
 real_d, inter_layer_real = discriminator.discriminator_network(real_lstm_outputs, is_training=is_training_pl)
@@ -163,15 +163,15 @@ def get_variable_via_scope(scope_lst):
     return vars
 
 with tf.name_scope('optimizers'):
-# control op dependencies for batch norm and trainable variables
-dvars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator')
-gvars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator')
+    # control op dependencies for batch norm and trainable variables
+    dvars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator')
+    gvars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator')
 
-update_ops_gen = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator')
-update_ops_dis = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='discriminator')
+    update_ops_gen = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator')
+    update_ops_dis = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='discriminator')
 
-optimizer_dis = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.5, name='dis_optimizer')
-optimizer_gen = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.5, name='gen_optimizer')
+    optimizer_dis = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.5, name='dis_optimizer')
+    optimizer_gen = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.5, name='gen_optimizer')
 
 no_change_scope = ['teller']
 no_change_vars = get_variable_via_scope(no_change_scope)
@@ -212,7 +212,7 @@ with tf.variable_scope("latent_variable"):
     z_optim = tf.get_variable(name='z_optim', shape= [batch_size, latent_dim], initializer=tf.truncated_normal_initializer())
     reinit_z = z_optim.initializer
 # EMA
-generator_ema = generator.generate_fake_sample(z_optim, is_training=is_training_pl, getter=get_getter(gen_ema), reuse=True, batch_size)
+generator_ema = generator.generate_fake_sample(z_optim, is_training=is_training_pl, getter=get_getter(gen_ema), reuse=True, batch_size=batch_size)
 # Pass real and fake images into discriminator separately
 real_d_ema, inter_layer_real_ema = discriminator.discriminator_network(input_pl, is_training=is_training_pl, getter=get_getter(gen_ema), reuse=True)
 fake_d_ema, inter_layer_fake_ema = discriminator.discriminator_network(generator_ema, is_training=is_training_pl, getter=get_getter(gen_ema), reuse=True)
