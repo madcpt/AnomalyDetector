@@ -20,7 +20,7 @@ class BaseLSTM(nn.Module):
         # (maybe) as same as period
         self.series_window_size=24
         # a number enough larger than period
-        self.score_window_size=60
+        self.score_window_size=64
         self.spec = anom.Silency(self.amp_window_size, self.series_window_size, self.score_window_size)
         self.sr_layer = self.spec.generate_anomaly_score
         
@@ -46,6 +46,8 @@ class BaseLSTM(nn.Module):
     def forward(self, inputs):
         # inputs [batch, len, 1]
         inputs = inputs.squeeze(dim=-1)
+        #print(inputs.shape)
+        inputs = inputs + 0.00001* torch.from_numpy(np.ones((inputs.shape[0],inputs.shape[1]))).cuda().float()
         sr = []
         for input in inputs:
             sr.append(torch.tensor(self.sr_layer(input.cpu().numpy())).unsqueeze(dim=0).to(self.device))
