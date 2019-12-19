@@ -61,7 +61,7 @@ class Amplify(dataset):
             if random() < rate:
                 index = randrange(0, len(X))
                 self.values[i][index] += (sum(X[index + 1:]) + np.mean(X)) * (1 + np.var(X)) * np.random.normal(0, 1)
-                self.labels[i] = True
+                self.labels[i] = 1
 
 
 def get_dataloader(batch_size=64):
