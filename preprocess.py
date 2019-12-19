@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader, random_split, Subset
 class dataset(Dataset):
     def __init__(self, normalize=True):
         self.data_file_path = 'A1Benchmark'
-        self.sliding_window_size = 500
+        self.sliding_window_size = 64
         self.values, self.labels = self.load_data(normalize=normalize)
 
     @staticmethod
