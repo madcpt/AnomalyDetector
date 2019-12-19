@@ -66,10 +66,10 @@ class Amplify(dataset):
             for i in range(len(self)):
                 self.values[i] = torch.from_numpy(spec.generate_anomaly_score(self.values[i].numpy())).float()
 
-
 def get_dataloader(batch_size=64, rate=0.4, split=0.9, use_sr=False, normalize=True):
     data = dataset(normalize)
     train_size = int(len(data) * split)
+
     test_size = len(data) - train_size
     train_set, test_set = random_split(data, [train_size, test_size])
     test_set = Amplify(test_set.dataset[np.array(test_set.indices)], rate=0, use_sr=use_sr)
