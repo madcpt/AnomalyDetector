@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader, random_split, Subset
 class dataset(Dataset):
     def __init__(self, normalize=True):
         self.data_file_path = 'A1Benchmark'
-        self.sliding_window_size = 64
+        self.sliding_window_size = 500
         self.values, self.labels = self.load_data(normalize=normalize)
 
     @staticmethod
@@ -57,7 +57,7 @@ class Amplify(dataset):
                 self.values[i][index] += (sum(X[index + 1:]) + np.mean(X)) * (1 + np.var(X)) * np.random.normal(0, 1)
                 self.labels[i] = True
         if use_sr:
-            print('Using SR, should get yourself a cup of coffee.')
+            print('Using SR, get yourself a cup of coffee.')
             from SR.silency import Silency
             amp_window_size = 4  # less than period
             series_window_size = 4  # (maybe) as same as period

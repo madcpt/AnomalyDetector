@@ -15,14 +15,27 @@ class BaseLSTM(nn.Module):
         self.n_layers = 2
         self.rnn_hidden = 32
         self.dropout = nn.Dropout(0.2).to(device)
-        self.cnn = nn.Sequential(nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=2),
-                                 nn.MaxPool1d(kernel_size=3, stride=2),
-                                 nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=2),
-                                 nn.MaxPool1d(kernel_size=3, stride=2),
-                                 ).to(device)
+        self.cnn = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1),
+            nn.MaxPool1d(kernel_size=3, stride=1),
+            nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1),
+            nn.MaxPool1d(kernel_size=3, stride=1),
+            nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1),
+            nn.MaxPool1d(kernel_size=3, stride=1),
+            nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1),
+            nn.MaxPool1d(kernel_size=3, stride=1),
+            nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1),
+            nn.MaxPool1d(kernel_size=3, stride=1),
+        ).to(device)
         self.lstm = nn.LSTM(1, self.rnn_hidden, self.n_layers, bidirectional=self.bidirectional, batch_first=True).to(
             device)
-        self.classifier = nn.Linear(2 * self.rnn_hidden if self.bidirectional else self.rnn_hidden, 2).to(device)
+        self.classifier = nn.Sequential(nn.Linear(2 * self.rnn_hidden if self.bidirectional else self.rnn_hidden, 80),
+                                        nn.ReLU(),
+                                        nn.Linear(80, 100),
+                                        nn.ReLU(),
+                                        nn.Dropout(0.2),
+                                        nn.Linear(100, 2)).to(device)
+
         self.criterion = nn.CrossEntropyLoss(reduction='sum')
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
 
@@ -65,10 +78,6 @@ class BaseLSTM(nn.Module):
             x, y = x.to(self.device), y.to(self.device)
             out = self.forward(x.unsqueeze(dim=-1))
             loss = self.criterion(out, y)
-            # print(out)
-            # print(y)
-            # print(loss)
-            # print()
             if train:
                 loss.backward()
                 self.optimizer.step()
@@ -85,7 +94,7 @@ class BaseLSTM(nn.Module):
         recall = tp / (tp + fn)
         f1 = 2 * precision * recall / (precision + recall)
         return "loss=%.4f, acc=%.4f, precision=%.4f, recall=%.4f, F1=%.4f" % (
-        l / cnt, (tp + tn) / cnt, precision, recall, f1)
+            l / cnt, (tp + tn) / cnt, precision, recall, f1)
 
 
 if __name__ == '__main__':
@@ -96,14 +105,14 @@ if __name__ == '__main__':
     print(device)
 
     config = clstm_config()
-    train, test = get_dataloader(batch_size=256, rate=0.45, split=0.9, use_sr=False, normalize=True)
+    train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=True, normalize=True)
 
     model = BaseLSTM(device)
     model = model
     print(model)
 
     print('test: ', model.run_epoch(test, False))
-    for epoch in range(100):
+    for epoch in range(300):
         print('epoch %d:' % epoch)
         # train
         print('train: ', model.run_epoch(train, True))
