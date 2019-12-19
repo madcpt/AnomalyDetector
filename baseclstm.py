@@ -1,10 +1,9 @@
 import torch
 from torch import nn
-import numpy as np
 from tqdm import tqdm
 
 from configuration import clstm_config
-from DataLoader import DataLoader
+from trash.DataLoader import DataLoader
 
 
 class BaseLSTM(nn.Module):

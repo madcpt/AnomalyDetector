@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from configuration import clstm_config
 from preprocess import get_dataloader
+import sranodec as anom
 
 
 class BaseLSTM(nn.Module):
@@ -14,6 +15,15 @@ class BaseLSTM(nn.Module):
         self.bidirectional = True
         self.n_layers = 2
         self.rnn_hidden = 32
+        # less than period
+        self.amp_window_size=24
+        # (maybe) as same as period
+        self.series_window_size=24
+        # a number enough larger than period
+        self.score_window_size=60
+        self.spec = anom.Silency(self.amp_window_size, self.series_window_size, self.score_window_size)
+        self.sr_layer = self.spec.generate_anomaly_score
+        
         self.dropout = nn.Dropout(0.2).to(device)
         self.cnn = nn.Sequential(nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=2),
                                  nn.MaxPool1d(kernel_size=3, stride=2),
@@ -24,7 +34,7 @@ class BaseLSTM(nn.Module):
             device)
         self.classifier = nn.Linear(2 * self.rnn_hidden if self.bidirectional else self.rnn_hidden, 2).to(device)
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
     def get_init_state(self, inputs):
         batch_size = inputs.size(0)
@@ -35,10 +45,17 @@ class BaseLSTM(nn.Module):
 
     def forward(self, inputs):
         # inputs [batch, len, 1]
+        inputs = inputs.squeeze(dim=-1)
+        sr = []
+        for input in inputs:
+            sr.append(torch.tensor(self.sr_layer(input.cpu().numpy())).unsqueeze(dim=0).to(self.device))
+        inputs = torch.cat(sr, dim=0)
+        inputs = inputs.unsqueeze(dim=-1).float()
+        # inputs [batch, len, 1]
         batch_size, len, _ = inputs.shape
-        # inputs = inputs.reshape((batch_size, 1, len))
-        # inputs = self.cnn(inputs)
-        # inputs = inputs.reshape((batch_size, -1, 1))
+        inputs = inputs.reshape((batch_size, 1, len))
+        inputs = self.cnn(inputs)
+        inputs = inputs.reshape((batch_size, -1, 1))
 
         h0, c0 = self.get_init_state(inputs)
         # print(inputs.shape, h0.shape, c0.shape)
@@ -92,7 +109,7 @@ if __name__ == '__main__':
     print(device)
 
     config = clstm_config()
-    train, test = get_dataloader(512)
+    train, test = get_dataloader(config.batch_size)
 
     model = BaseLSTM(device)
     model = model
