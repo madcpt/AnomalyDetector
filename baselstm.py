@@ -23,8 +23,8 @@ class BaseLSTM(nn.Module):
         self.lstm = nn.LSTM(1, self.rnn_hidden, self.n_layers, bidirectional=self.bidirectional, batch_first=True).to(
             device)
         self.classifier = nn.Linear(2 * self.rnn_hidden if self.bidirectional else self.rnn_hidden, 2).to(device)
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
+        self.criterion = nn.CrossEntropyLoss(reduction='sum')
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
 
     def get_init_state(self, inputs):
         batch_size = inputs.size(0)
@@ -65,6 +65,10 @@ class BaseLSTM(nn.Module):
             x, y = x.to(self.device), y.to(self.device)
             out = self.forward(x.unsqueeze(dim=-1))
             loss = self.criterion(out, y)
+            # print(out)
+            # print(y)
+            # print(loss)
+            # print()
             if train:
                 loss.backward()
                 self.optimizer.step()
@@ -92,7 +96,7 @@ if __name__ == '__main__':
     print(device)
 
     config = clstm_config()
-    train, test = get_dataloader(512)
+    train, test = get_dataloader(batch_size=256, rate=0.45, split=0.9, use_sr=False, normalize=True)
 
     model = BaseLSTM(device)
     model = model
