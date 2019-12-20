@@ -20,15 +20,16 @@ class discriminator(nn.Module):
 
         # SR CNN 指定的网络参数？
         self.main= nn.Sequential(
-                nn.Conv1d(in_channels=1, out_channels=64, kernel_size=64, stride=1,padding=64),
+                nn.Conv1d(in_channels=1, out_channels=64, kernel_size = 4, stride=2,padding=1),
                 nn.MaxPool1d(kernel_size=2, stride=2),
                 nn.LeakyReLU(0.2, inplace = True),
                 nn.BatchNorm1d(64),
-                nn.Conv1d(in_channels=64, out_channels=128, kernel_size=64, stride=1),
+                nn.Conv1d(in_channels=64, out_channels=128, kernel_size= 4, stride=2,padding=1),
                 nn.MaxPool1d(kernel_size=2, stride=2),
                 nn.LeakyReLU(0.2, inplace = True),
-                nn.BatchNorm1d(128)
-        ) 
+                nn.BatchNorm1d(128),
+                nn.Conv1d(in_channels=128, out_channels=128, kernel_size= 4, stride=1,padding=0),
+         ) 
         self.linear = nn.Sequential(        
                 nn.Linear(128 ,24),
                 nn.Tanh(),
@@ -38,6 +39,7 @@ class discriminator(nn.Module):
 
     def forward(self,x):
         x = self.main(x)
+        #return x
         x = x.squeeze()
         return self.linear(x)
 
@@ -100,11 +102,15 @@ if __name__ == "__main__":
     for x,y  in train:
         # -------- train D
         x, y = x.to(device), y.to(device).float()
+        #print(x.shape)
         x = x.unsqueeze(dim=1)
+        #print(x.shape)
+        #print(x.shape)
         output = netD(x).view(-1)
         #print(output.shape)
+        #print(output.shape)
 
-        # 正确错误是一半一半哈？
+    #     # 正确错误是一半一半哈？
         errD_real = criterion(output,y)
         errD_real.backward()
         
@@ -126,5 +132,6 @@ if __name__ == "__main__":
         optimizerG.step()
         netG.zero_grad()
     # 统计
-    
+        print("running")
+        #break
     
