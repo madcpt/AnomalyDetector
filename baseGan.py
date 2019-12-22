@@ -90,7 +90,7 @@ if __name__ == "__main__":
     netG = Generator().to(device)
     netD = discriminator().to(device)
     # print(netG(noise).shape)
-    criterion = nn.BCELoss()
+    criterion = nn.BCELoss(reduction='sum')
     beta1 = 0.5
     optimizerD = optim.Adam(netD.parameters(), lr=1e-5, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=1e-5, betas=(beta1, 0.999))
@@ -145,9 +145,9 @@ if __name__ == "__main__":
         with torch.no_grad():
             outs = []
             for x, y in test:
-                x, y = x.to(device).unsqueeze(dim=1), y.to(device).float()
-                output = netD(x)
-
-                outs.append([output, y])
+                x, y = x.to(device).unsqueeze(dim=1), y.to(device)
+                output = netD(x).view(-1)
+                pred = (output >= 0.5).long()
+                outs.append([pred, y])
             print(f'test acc: {calculate_acc(outs)}')
             print(f'test f1 score: {calculate_f1score(outs)}')
