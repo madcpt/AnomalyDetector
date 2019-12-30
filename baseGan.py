@@ -1,5 +1,5 @@
 import argparse
-import os,sys
+import os, sys
 import random
 import torch
 import torch.nn as nn
@@ -15,64 +15,64 @@ from configuration import clstm_config
 from preprocess import get_dataloader
 from utils.evaluate import calculate_f1score, calculate_acc
 
+
 class discriminator(nn.Module):
 
     # cnn + linear
     # dcgan
     def __init__(self):
-        super(discriminator,self).__init__()
+        super(discriminator, self).__init__()
 
         # SR CNN 指定的网络参数？
-        self.main= nn.Sequential(
-                nn.Conv1d(in_channels=1, out_channels=64, kernel_size = 4, stride=2,padding=1),
-                nn.MaxPool1d(kernel_size=2, stride=2),
-                nn.LeakyReLU(0.2, inplace = True),
-                nn.BatchNorm1d(64),
-                nn.Conv1d(in_channels=64, out_channels=128, kernel_size= 4, stride=2,padding=1),
-                nn.MaxPool1d(kernel_size=2, stride=2),
-                nn.LeakyReLU(0.2, inplace = True),
-                nn.BatchNorm1d(128),
-                nn.Conv1d(in_channels=128, out_channels=128, kernel_size= 4, stride=1,padding=0),
-         ) 
-        self.linear = nn.Sequential(        
-                nn.Linear(128 ,24),
-                nn.Tanh(),
-                nn.Linear(24,1),
-                nn.Sigmoid(),
-                )
+        self.main = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=64, kernel_size=4, stride=2, padding=1),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm1d(64),
+            nn.Conv1d(in_channels=64, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm1d(128),
+            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=4, stride=1, padding=0),
+        )
+        self.linear = nn.Sequential(
+            nn.Linear(128, 24),
+            nn.Tanh(),
+            nn.Linear(24, 1),
+            nn.Sigmoid(),
+        )
 
-    def forward(self,x):
+    def forward(self, x):
         x = self.main(x)
-        #return x
+        # return x
         x = x.squeeze()
         return self.linear(x)
 
+
 class Generator(nn.Module):
     def __init__(self):
-        #不对称，待修改
-        super(Generator,self).__init__()
+        # 不对称，待修改
+        super(Generator, self).__init__()
         self.Main = nn.Sequential(
-            nn.ConvTranspose1d(1,64 , kernel_size = 4 , stride = 2 ,padding = 3, bias =False ),
+            nn.ConvTranspose1d(1, 64, kernel_size=4, stride=2, padding=3, bias=False),
             nn.BatchNorm1d(64),
             nn.ReLU(True),
-            nn.ConvTranspose1d(64,32, kernel_size = 4 , stride =2 ,padding = 1,bias =False),
+            nn.ConvTranspose1d(64, 32, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm1d(32),
             nn.ReLU(True),
-            nn.ConvTranspose1d(32,16, kernel_size = 4 , stride =2 ,padding = 1,bias =False),
+            nn.ConvTranspose1d(32, 16, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm1d(16),
             nn.ReLU(True),
-            nn.ConvTranspose1d(16,8, kernel_size = 4 , stride =2 ,padding = 1,bias =False),
+            nn.ConvTranspose1d(16, 8, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm1d(8),
             nn.ReLU(True),
-            nn.ConvTranspose1d(8,1, kernel_size = 4 , stride =2 ,padding = 1,bias =False),
+            nn.ConvTranspose1d(8, 1, kernel_size=4, stride=2, padding=1, bias=False),
             nn.Tanh()
 
         )
-    
-    def forward(self,x):
+
+    def forward(self, x):
         return self.Main(x)
-
-
 
 
 if __name__ == "__main__":
@@ -92,8 +92,8 @@ if __name__ == "__main__":
     # print(netG(noise).shape)
     criterion = nn.BCELoss(reduction='sum')
     beta1 = 0.5
-    optimizerD = optim.Adam(netD.parameters(), lr=1e-5, betas=(beta1, 0.999))
-    optimizerG = optim.Adam(netG.parameters(), lr=1e-5, betas=(beta1, 0.999))
+    optimizerD = optim.Adam(netD.parameters(), lr=1e-4, betas=(beta1, 0.999))
+    optimizerG = optim.Adam(netG.parameters(), lr=1e-4, betas=(beta1, 0.999))
     config = clstm_config()
     train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=True, normalize=True)
 
@@ -104,14 +104,13 @@ if __name__ == "__main__":
         # ----------------------------- train
         lossD, lossG = 0, 0
         for x, y in train:
+            batch_size = x.size(0)
             # -------- train D
             x, y = x.to(device), y.to(device).float()
             # print(x.shape)
             x = x.unsqueeze(dim=1)
             # print(x.shape)
-            # print(x.shape)
             output = netD(x).view(-1)
-            # print(output.shape)
             # print(output.shape)
 
             #     # 正确错误是一半一半哈？
@@ -119,9 +118,11 @@ if __name__ == "__main__":
             errD_real.backward()
             lossD += errD_real.item()
 
-            batch_size = 64
             noise = torch.randn(batch_size, 1, 4, device=device)
             fake = netG(noise)
+            # print(fake.shape)
+            # exit()
+
             label = torch.randint(0, 1, (batch_size,), device=device).float()
             errD_fake = criterion(netD(fake.detach()).view(-1), label)
             errD_fake.backward()

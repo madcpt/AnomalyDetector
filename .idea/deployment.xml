@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="speechlib">
+  <component name="PublishConfigData" autoUpload="Always" serverName="speechlab-srcnn">
     <serverData>
-      <paths name="speechlib">
+      <paths name="speechlab-srcnn">
         <serverdata>
           <mappings>
-            <mapping deploy="/Projects/AnomalyDetector" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/anomaly/AnomalyDetector" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

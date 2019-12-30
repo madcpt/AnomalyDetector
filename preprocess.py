@@ -26,6 +26,7 @@ class dataset(Dataset):
 
     def load_data(self, normalize=True):
         all_data = [[], []]
+        total_points, anomaly_points = 0, 0
         for i in range(1, 68):
             pathname = os.path.join(self.data_file_path, "real_" + str(i) + ".csv")
             data = pd.read_csv(pathname)
@@ -34,8 +35,14 @@ class dataset(Dataset):
             if normalize:
                 values = [(value - values_min) / (values_max - values_min) for value in values]
             Xs, Ys = self.slide_window(values, labels, self.sliding_window_size)
+            print(values)
+            print(labels)
+            exit()
+            total_points += len(values)
+            anomaly_points += sum(labels)
             all_data[0] += Xs
             all_data[1] += Ys
+        print(total_points, anomaly_points)
         return torch.tensor(all_data[0]).float(), torch.tensor(all_data[1]).long()
 
     def __getitem__(self, index):

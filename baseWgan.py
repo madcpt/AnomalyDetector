@@ -10,6 +10,7 @@ import torch.utils.data
 import numpy as np
 from configuration import clstm_config
 from preprocess import get_dataloader
+from utils.evaluate import *
 
 class discriminator(nn.Module):
 
@@ -99,17 +100,11 @@ if __name__ == "__main__":
     config = clstm_config()
     train, test = get_dataloader(config.batch_size)
 
-
-
- 
-     
     #----------------------------- train
     for x,y  in train:
         # -------- train D
         for parm in netD.parameters():
             parm.data.clamp_(-0.01,0.01)
-
-
 
         x, y = x.to(device), y.to(device).float()
         #print(x.shape)
@@ -153,4 +148,70 @@ if __name__ == "__main__":
     # 统计
         #print("running")
         #break
-    
+
+    for epoch in range(100):
+        print(f'====== epoch {epoch} ======')
+        netD.train()
+        netG.train()
+        # ----------------------------- train
+        lossD, lossG = 0, 0
+
+        for x, y in train:
+            # -------- train D
+            for parm in netD.parameters():
+                parm.data.clamp_(-0.01, 0.01)
+
+            x, y = x.to(device), y.to(device).float()
+            # print(x.shape)
+            x = x.unsqueeze(dim=1)
+
+            one = torch.ones(x.shape[0], 1).to(device)
+            mone = -1 * one.to(device)
+            # print(x.shape)
+            # print(x.shape)
+            output = netD(x)
+            output.backward(one)
+            # print(output.shape)
+            # print(output.shape)
+
+            #     # 正确错误是一半一半哈？
+            # errD_real = criterion(output,y)
+            # errD_real.backward()
+
+            batch_size = x.shape[0]
+            noise = torch.randn(batch_size, 1, 4, device=device)
+            # print(type(noise),noise.shape)
+            fake = netG(noise)
+            # label = torch.randint(0,1,(batch_size,),device = device).float()
+            output1 = netD(fake.detach())
+            output1.backward(mone)
+            # errD_fake = criterion(netD(fake.detach()).view(-1),label)
+            # errD_fake.backward()
+            optimizerD.step()
+            netD.zero_grad()
+
+            # -------- train G
+            # It is said that we should try G more @ycy
+
+            output = netD(fake.detach())
+            # label = torch.randint(1,2,(batch_size,),device = device).float()
+            # errG = criterion(output,label)
+            # errG.backward()
+            output.backward(one)
+            optimizerG.step()
+            netG.zero_grad()
+        # 统计
+        # print("running")
+        # break
+        netD.eval()
+        netG.eval()
+        print(f"Generator loss: {lossD} ; Discriminator loss: {lossG} .")
+        with torch.no_grad():
+            outs = []
+            for x, y in test:
+                x, y = x.to(device).unsqueeze(dim=1), y.to(device)
+                output = netD(x).view(-1)
+                pred = (output >= 0.5).long()
+                outs.append([pred, y])
+            print(f'test acc: {calculate_acc(outs)}')
+            print(f'test f1 score: {calculate_f1score(outs)}')
