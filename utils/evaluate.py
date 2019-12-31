@@ -1,5 +1,5 @@
 import os, sys
-
+import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -27,3 +27,15 @@ def calculate_f1score(outs):
     recall = float(tp) / (tp + fn)
     return 2 * precision * recall / (precision + recall)
 
+
+def calculate_f1score_threshold(outs):
+    thresholds = np.arange(0.01, 0.5, step=0.01)
+    outss = [[]] * len(thresholds)
+    for t_id, t in enumerate(thresholds):
+        for output, label in outs:
+            pred = (output >= t).long()
+            outss[t_id].append([pred, label])
+    f1_scores = [calculate_f1score(outs) for outs in outss]
+    best_t = thresholds[np.argmax(f1_scores)]
+    return max(f1_scores)
+#
