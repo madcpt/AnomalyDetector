@@ -41,7 +41,7 @@ if __name__ == "__main__":
     optimizerD = optim.Adam(netD.parameters(), lr=1e-5, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=1e-5, betas=(beta1, 0.999))
     config = clstm_config()
-    test,train = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=True, normalize=True)
+    train,test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=True, normalize=True)
 
     ######## Pretrain Classifier ########
     for epoch in range(PRE_EPOCH):
