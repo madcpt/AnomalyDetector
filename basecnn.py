@@ -27,14 +27,16 @@ class SRCNN(nn.Module):
         # self.sr_layer = self.spec.generate_anomaly_score
 
         self.dropout = nn.Dropout(0.2).to(device)
-        self.cnn1 = nn.Sequential(nn.Conv1d(in_channels=1, out_channels=64, kernel_size=64, stride=1, padding=64),
+        self.cnn1 = nn.Sequential(nn.Conv1d(in_channels=1, out_channels=64, kernel_size=5, stride=1),
+                                  nn.Tanh(),
                                   nn.MaxPool1d(kernel_size=2, stride=2),
                                   ).to(device)
-        self.cnn2 = nn.Sequential(nn.Conv1d(in_channels=64, out_channels=128, kernel_size=64, stride=1),
-                                  # nn.MaxPool1d(kernel_size=2, stride=2),
+        self.cnn2 = nn.Sequential(nn.Conv1d(in_channels=64, out_channels=64, kernel_size=5, stride=1),
+                                  nn.Tanh(),
+                                  nn.MaxPool1d(kernel_size=2, stride=2),
                                   ).to(device)
 
-        self.classifier = nn.Sequential(nn.Linear(128, 32), nn.Tanh(), nn.Linear(32, 4)).to(device)
+        self.classifier = nn.Sequential(nn.Linear(13 * 64, 4)).to(device)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
 
@@ -56,11 +58,12 @@ class SRCNN(nn.Module):
         # print(inputs.shape)
         inputs = self.cnn2(inputs)
         # print(inputs.shape)
-        inputs = inputs.squeeze()
-        # exit()
+        # inputs = inputs.squeeze()
+        inputs = inputs.view((inputs.size(0), -1))
 
         pred = self.classifier(inputs)
         # print(pred.shape)
+        # exit()
         pred = torch.sigmoid(pred).squeeze(dim=-1)
         return pred
 
@@ -101,14 +104,14 @@ if __name__ == '__main__':
     print(device)
 
     config = clstm_config()
-    train, test = get_dataloader(config.batch_size, rate=0.1, split=0.9, use_sr=False, normalize=True)
+    train, test = get_dataloader(config.batch_size, rate=0.4, split=0.9, use_sr=False, normalize=True)
 
     model = SRCNN(device)
     model = model
     print(model)
 
     print('test: ', model.run_epoch(test, False))
-    for epoch in range(100):
+    for epoch in range(1000):
         print('epoch %d:' % epoch)
         # train
         print('train: ', model.run_epoch(train, True))
