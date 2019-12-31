@@ -143,8 +143,10 @@ if __name__ == "__main__":
             for x, y in test:
                 x, y = x.to(device).unsqueeze(dim=1), y.to(device)
                 output = netD(x).view(-1)
-                # pred = (output >= 0.5).long()
+            #     pred = (output >= 0.5).long()
+            #     outs.append([pred, y])
+            # print(f'test acc: {calculate_acc(outs)}')
+            # print(f'test f1 score: {calculate_f1score(outs)}')
                 outs.append([output, y])
             print(f'test acc: {evaluate_acc(outs)}')
             print(f'test f1 score: {evaluate_f1score_threshold(outs)}')
-
