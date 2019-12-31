@@ -95,7 +95,7 @@ if __name__ == "__main__":
     optimizerD = optim.Adam(netD.parameters(), lr=1e-4, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=1e-4, betas=(beta1, 0.999))
     config = clstm_config()
-    train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=True, normalize=True)
+    train, test = get_dataloader(batch_size=512, rate=0, split=0.9, use_sr=False, normalize=True)
 
     for epoch in range(MAX_EPOCH):
         print(f'====== epoch {epoch} ======')
@@ -107,11 +107,8 @@ if __name__ == "__main__":
             batch_size = x.size(0)
             # -------- train D
             x, y = x.to(device), y.to(device).float()
-            # print(x.shape)
-            x = x.unsqueeze(dim=1)
-            # print(x.shape)
-            output = netD(x).view(-1)
-            # print(output.shape)
+            x = x.unsqueeze(dim=1)  # x: [b, 1, 64]
+            output = netD(x).squeeze()  # output: [b]
 
             #     # 正确错误是一半一半哈？
             errD_real = criterion(output, y)
@@ -119,9 +116,7 @@ if __name__ == "__main__":
             lossD += errD_real.item()
 
             noise = torch.randn(batch_size, 1, 4, device=device)
-            fake = netG(noise)
-            # print(fake.shape)
-            # exit()
+            fake = netG(noise)  # fake: x
 
             label = torch.randint(0, 1, (batch_size,), device=device).float()
             errD_fake = criterion(netD(fake.detach()).view(-1), label)
@@ -139,7 +134,7 @@ if __name__ == "__main__":
             netG.zero_grad()
             lossG += errG.item()
             # 统计
-            # break
+            # brea
         netD.eval()
         netG.eval()
         print(f"Generator loss: {lossD} ; Discriminator loss: {lossG} .")
@@ -152,3 +147,4 @@ if __name__ == "__main__":
                 outs.append([output, y])
             print(f'test acc: {evaluate_acc(outs)}')
             print(f'test f1 score: {evaluate_f1score_threshold(outs)}')
+

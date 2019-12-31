@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from random import random, randrange
+import pickle
 
 import numpy as np
 import torch
@@ -35,9 +36,9 @@ class dataset(Dataset):
             if normalize:
                 values = [(value - values_min) / (values_max - values_min) for value in values]
             Xs, Ys = self.slide_window(values, labels, self.sliding_window_size)
-            print(values)
-            print(labels)
-            exit()
+            # print(values)
+            # print(labels)
+            # exit()
             total_points += len(values)
             anomaly_points += sum(labels)
             all_data[0] += Xs
@@ -73,19 +74,26 @@ class Amplify(dataset):
             for i in range(len(self)):
                 self.values[i] = torch.from_numpy(spec.generate_anomaly_score(self.values[i].numpy())).float()
 
+
 def get_dataloader(batch_size=64, rate=0.4, split=0.9, use_sr=False, normalize=True):
     data = dataset(normalize)
     train_size = int(len(data) * split)
 
     test_size = len(data) - train_size
     train_set, test_set = random_split(data, [train_size, test_size])
-    test_set = Amplify(test_set.dataset[np.array(test_set.indices)], rate=0, use_sr=use_sr)
     train_set = Amplify(train_set.dataset[np.array(train_set.indices)], rate=rate, use_sr=use_sr)
+    test_set = Amplify(test_set.dataset[np.array(test_set.indices)], rate=0, use_sr=use_sr)
+    # TODO
+    # with open('data/test.pl', 'wb') as f:
+    #     pickle.dump(test_set, f)
+    # with open('data/test.pl', 'rb') as f:
+    #     test_set = pickle.load(f)
 
-    print("Train Size: ", len(train_set), " Negative Rate: ",
-          1 - sum(train_set.labels).item() / len(train_set))
-    print("Test Size: ", len(test_set), " Negative Rate: ",
-          1 - sum(test_set.labels).item() / len(test_set))
+    print("Total Stat: ", sum(train_set.labels).item() + sum(test_set.labels).item(), len(train_set) + len(test_set),
+          "Negative Rate: ",
+          1 - (sum(train_set.labels).item() - sum(test_set.labels).item()) / (len(train_set) + len(test_set)))
+    print("Train Size: ", len(train_set), " Negative Rate: ", 1 - sum(train_set.labels).item() / len(train_set))
+    print("Test Size: ", len(test_set), " Negative Rate: ", 1 - sum(test_set.labels).item() / len(test_set))
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=4)
@@ -93,7 +101,7 @@ def get_dataloader(batch_size=64, rate=0.4, split=0.9, use_sr=False, normalize=T
 
 
 if __name__ == '__main__':
-    train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=True, normalize=True)
+    train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=False, normalize=True)
     for data in train:
         print(data[0].shape)  # [batch, 60]
         print(data[1].shape)  # [batch]
