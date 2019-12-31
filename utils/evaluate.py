@@ -29,7 +29,7 @@ def calculate_f1score(outs):
 
 
 def evaluate_f1score_threshold(outs):
-    thresholds = np.arange(0.01, 0.5, step=0.01)
+    thresholds = np.arange(0.01, 0.6, step=0.01)
     outss = [[]] * len(thresholds)
     for t_id, t in enumerate(thresholds):
         for output, label in outs:
