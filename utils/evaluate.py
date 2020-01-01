@@ -44,7 +44,7 @@ def evaluate_acc(outs):
     accs = []
     total_num = 0
     for output, label in outs:
-        pred = (output >=0.5).long()
+        pred = (output >= 0.5).long()
         pred = pred.cpu().numpy()
         label = label.cpu().numpy()
         accs.append(sum([int(pred[i] == label[i]) for i in range(len(pred))]))
