@@ -12,6 +12,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configuration import clstm_config
 from preprocess import get_dataloader
 from utils.evaluate import *
+from configuration import clstm_config
+from preprocess import get_dataloader
+from utils.evaluate import *
 
 
 class discriminator(nn.Module):
@@ -139,7 +142,6 @@ class GANomaly(nn.Module):
     def backward_d(self,input):
 
         # Real - Fake Loss
-
         self.err_d_real = self.l_bce(self.pred_real, self.real_label)
         self.err_d_fake = self.l_bce(self.pred_fake, self.fake_label)
 
