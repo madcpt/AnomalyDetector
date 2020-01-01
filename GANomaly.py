@@ -83,6 +83,9 @@ class Generator(nn.Module):
 def l1_loss(input, target):
     return torch.mean(torch.abs(input - target))
 
+def l1_loss_lyt(input, target):
+    input = input.view(input.size(0), 1)
+    return torch.abs(input - target)
 
 def l2_loss(input, target):
     return torch.mean(torch.pow((input - target), 2))
@@ -116,6 +119,7 @@ class GANomaly(nn.Module):
         self.l_enc = l2_loss
         self.l_bce = nn.BCELoss()
         self.lr = 0.0001
+        self.l1 = l1_loss_lyt
         self.optimizerD = optim.Adam(self.netD.parameters(), lr=self.lr)
         self.optimizerG = optim.Adam(self.netG.parameters(), lr=self.lr)
         self.w_adv = 1
@@ -128,6 +132,7 @@ class GANomaly(nn.Module):
         # To DO 这里可以把discriminator 和 netD 分开 提取高维的latent space feature vector
         self.input = input
         self.fake, self.latent_i, self.latent_o = self.netG(input)
+        self.score = self.l1(self.latent_i, self.latent_o)
 
     def forward_d(self, input):
         self.feat_real = self.netD(input)
@@ -153,21 +158,22 @@ class GANomaly(nn.Module):
         self.err_d = (self.err_d_real + self.err_d_fake) * 0.5
         self.err_d.backward()
 
-    def optimize_params(self, input):
+    def optimize_params(self, input, is_train=True):
         # Forward-pass
         self.forward_g(input)
         self.forward_d(input)
 
-        # Backward-pass
-        # netg
-        self.optimizerG.zero_grad()
-        self.backward_g(input)
-        self.optimizerG.step()
+        if is_train:
+            # Backward-pass
+            # netg
+            self.optimizerG.zero_grad()
+            self.backward_g(input)
+            self.optimizerG.step()
 
-        # netd
-        self.optimizerD.zero_grad()
-        self.backward_d(input)
-        self.optimizerD.step()
+            # netd
+            self.optimizerD.zero_grad()
+            self.backward_d(input)
+            self.optimizerD.step()
 
 
 if __name__ == "__main__":
@@ -179,9 +185,29 @@ if __name__ == "__main__":
     print(device)
 
     # Train the network
-    x = torch.rand(512, 1, 64, device=device)
+    # x = torch.rand(512, 1, 64, device=device)
     network = GANomaly(device)
-    network.optimize_params(x)
+    # network.optimize_params(x)
 
     # Test the network with discriminator
-    train, test = get_gan_data(batch_size=512, contaminate_rate=0.5, split=0.9, use_sr=False, normalize=True)
+    train, test = get_gan_data(batch_size=512, contaminate_rate=0.2, split=0.9, use_sr=False, normalize=True)
+    for epoch in range(100):
+        network.train()
+        for x, y in train:
+            x = x.unsqueeze(dim=1).float().to(device)
+            network.optimize_params(x)
+        # print('train: ', network.score)
+
+        network.eval()
+        X, Y = [], []
+        for x, y in test:
+            x = x.unsqueeze(dim=1).float().to(device)
+            network.optimize_params(x, False)
+            X.append(network.score.cpu().detach())
+            Y.append(y)
+        X = torch.cat(X, dim=0).squeeze()
+        Y = torch.cat(Y, dim=0)
+        # print(X.shape)
+        # print(Y.shape)
+        f1 = normalize_and_get_f1_score(Y, X, threshold=0.3)
+        print(f1)

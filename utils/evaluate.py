@@ -1,5 +1,6 @@
 import os, sys
 import numpy as np
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -28,8 +29,8 @@ def calculate_f1score(outs):
     return 2 * precision * recall / (precision + recall)
 
 
-def evaluate_f1score_threshold(outs,bg=0,ed=0.6,step=0.06):
-    thresholds = np.arange(bg+step, ed, step=step)
+def evaluate_f1score_threshold(outs, bg=0, ed=0.6, step=0.06):
+    thresholds = np.arange(bg + step, ed, step=step)
     f1_scores = []
     for t in thresholds:
         preds = []
@@ -40,6 +41,8 @@ def evaluate_f1score_threshold(outs,bg=0,ed=0.6,step=0.06):
     print(f1_scores)
     best_t = thresholds[np.argmax(f1_scores)]
     return max(f1_scores)
+
+
 #
 
 def evaluate_acc(outs):
@@ -52,3 +55,16 @@ def evaluate_acc(outs):
         accs.append(sum([int(pred[i] == label[i]) for i in range(len(pred))]))
         total_num += len(label)
     return float(sum(accs)) / total_num
+
+
+import torch
+from sklearn.metrics import roc_curve, auc, average_precision_score, f1_score
+
+
+def normalize_and_get_f1_score(labels, scores, threshold=0.2):
+    # print(scores)
+    scores = (scores - torch.min(scores)) / (torch.max(scores) - torch.min(scores))
+    scores[scores >= threshold] = 0
+    scores[scores < threshold] = 1
+    # exit()
+    return f1_score(labels, scores)
