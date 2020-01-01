@@ -76,7 +76,7 @@ class Generator(nn.Module):
 
 
 if __name__ == "__main__":
-    MAX_EPOCH = 100
+    MAX_EPOCH = 1000
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
     else:
@@ -95,8 +95,9 @@ if __name__ == "__main__":
     optimizerD = optim.Adam(netD.parameters(), lr=1e-4, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=1e-4, betas=(beta1, 0.999))
     config = clstm_config()
-    train, test = get_dataloader(batch_size=512, rate=0, split=0.9, use_sr=False, normalize=True)
+    train, test = get_dataloader(batch_size=256, rate=0.1, split=0.9, use_sr=False, normalize=True)
 
+    best_f1 = 0
     for epoch in range(MAX_EPOCH):
         print(f'====== epoch {epoch} ======')
         netD.train()
@@ -149,4 +150,7 @@ if __name__ == "__main__":
             # print(f'test f1 score: {calculate_f1score(outs)}')
                 outs.append([output, y])
             print(f'test acc: {evaluate_acc(outs)}')
-            print(f'test f1 score: {evaluate_f1score_threshold(outs)}')
+            f1 = evaluate_f1score_threshold(outs, bg=0.15, ed=0.85, step=0.05)
+            print(f'test f1 score: {f1}')
+            best_f1 = max(best_f1, f1)
+            print(f'best test f1 score: {best_f1}')
