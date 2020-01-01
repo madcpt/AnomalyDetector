@@ -8,9 +8,10 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 import numpy as np
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configuration import clstm_config
-from preprocess import get_dataloader
+from preprocess import get_gan_data
 from utils.evaluate import *
 from configuration import clstm_config
 from preprocess import get_dataloader
@@ -49,6 +50,7 @@ class discriminator(nn.Module):
         x = x.squeeze()
         return self.linear(x)
 
+
 class Generator(nn.Module):
     def __init__(self):
         # 不对称，待修改
@@ -78,31 +80,34 @@ class Generator(nn.Module):
         return self.Main(x)
 
 
-def l1_loss(input,target):
+def l1_loss(input, target):
     return torch.mean(torch.abs(input - target))
 
-def l2_loss(input,target):
-    return torch.mean(torch.pow((input-target),2))
+
+def l2_loss(input, target):
+    return torch.mean(torch.pow((input - target), 2))
+
 
 class netG(nn.Module):
     def __init__(self):
-        super(netG,self).__init__()
+        super(netG, self).__init__()
         self.encoder1 = discriminator()
         self.decoder = Generator()
         self.encoder2 = discriminator()
+
     def forward(self, x):
         latent_i = self.encoder1(x)
-        print(latent_i.size())
-        latent_i = latent_i.unsqueeze(dim = 1)
+        # print(latent_i.size())
+        latent_i = latent_i.unsqueeze(dim=1)
         gen_imag = self.decoder(latent_i)
-        print(gen_imag.size())
+        # print(gen_imag.size())
         latent_o = self.encoder2(gen_imag)
         return gen_imag, latent_i, latent_o
 
 
 class GANomaly(nn.Module):
-    def __init__(self,device):
-        super(GANomaly,self).__init__()
+    def __init__(self, device):
+        super(GANomaly, self).__init__()
         self.device = device
         self.netD = discriminator().to(device)
         self.netG = netG().to(device)
@@ -111,26 +116,26 @@ class GANomaly(nn.Module):
         self.l_enc = l2_loss
         self.l_bce = nn.BCELoss()
         self.lr = 0.0001
-        self.optimizerD = optim.Adam(self.netD.parameters(), lr = self.lr) 
-        self.optimizerG = optim.Adam(self.netG.parameters(), lr = self.lr)
+        self.optimizerD = optim.Adam(self.netD.parameters(), lr=self.lr)
+        self.optimizerG = optim.Adam(self.netG.parameters(), lr=self.lr)
         self.w_adv = 1
         self.w_con = 1
         self.w_enc = 1
 
-    def forward_g(self,input):
-        self.real_label = torch.ones(input.size()[0],1,device = self.device)    
-        self.fake_label = torch.zeros(input.size()[0],1,device = self.device)
-        #To DO 这里可以把discriminator 和 netD 分开 提取高维的latent space feature vector
+    def forward_g(self, input):
+        self.real_label = torch.ones(input.size()[0], 1, device=self.device)
+        self.fake_label = torch.zeros(input.size()[0], 1, device=self.device)
+        # To DO 这里可以把discriminator 和 netD 分开 提取高维的latent space feature vector
         self.input = input
         self.fake, self.latent_i, self.latent_o = self.netG(input)
-    
-    def forward_d(self,input):
+
+    def forward_d(self, input):
         self.feat_real = self.netD(input)
         self.pred_real = self.feat_real
         self.feat_fake = self.netD(self.fake.detach())
         self.pred_fake = self.feat_fake
 
-    def backward_g(self,input):
+    def backward_g(self, input):
         self.err_g_adv = self.l_adv(self.netD(input)[1], self.netD(self.fake)[1])
         self.err_g_con = self.l_con(self.fake, input)
         self.err_g_enc = self.l_enc(self.latent_o, self.latent_i)
@@ -138,9 +143,8 @@ class GANomaly(nn.Module):
                      self.err_g_con * self.w_con + \
                      self.err_g_enc * self.w_enc
         self.err_g.backward(retain_graph=True)
-    
-    def backward_d(self,input):
 
+    def backward_d(self, input):
         # Real - Fake Loss
         self.err_d_real = self.l_bce(self.pred_real, self.real_label)
         self.err_d_fake = self.l_bce(self.pred_fake, self.fake_label)
@@ -149,9 +153,7 @@ class GANomaly(nn.Module):
         self.err_d = (self.err_d_real + self.err_d_fake) * 0.5
         self.err_d.backward()
 
-
-    def optimize_params(self,input):
-
+    def optimize_params(self, input):
         # Forward-pass
         self.forward_g(input)
         self.forward_d(input)
@@ -168,18 +170,18 @@ class GANomaly(nn.Module):
         self.optimizerD.step()
 
 
-
 if __name__ == "__main__":
 
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
     else:
-         device = torch.device("cpu")
+        device = torch.device("cpu")
     print(device)
 
-    #Train the network
-    x = torch.rand(512,1,64, device = device)
+    # Train the network
+    x = torch.rand(512, 1, 64, device=device)
     network = GANomaly(device)
     network.optimize_params(x)
-    
-    #Test the network with discriminator
+
+    # Test the network with discriminator
+    train, test = get_gan_data(batch_size=512, contaminate_rate=0.5, split=0.9, use_sr=False, normalize=True)
