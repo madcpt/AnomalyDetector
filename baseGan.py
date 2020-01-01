@@ -95,7 +95,7 @@ if __name__ == "__main__":
     optimizerD = optim.Adam(netD.parameters(), lr=1e-4, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=1e-4, betas=(beta1, 0.999))
     config = clstm_config()
-    train, test = get_dataloader(batch_size=256, rate=0.1, split=0.9, use_sr=False, normalize=True)
+    train, test = get_dataloader(batch_size=512, rate=0, split=0.9, use_sr=True, normalize=True)
 
     best_f1 = 0
     for epoch in range(MAX_EPOCH):

@@ -28,14 +28,16 @@ def calculate_f1score(outs):
     return 2 * precision * recall / (precision + recall)
 
 
-def evaluate_f1score_threshold(outs,bg=0.01,ed=0.6,step=0.01):
+def evaluate_f1score_threshold(outs,bg=0,ed=0.6,step=0.06):
     thresholds = np.arange(bg+step, ed, step=step)
-    outss = [[]] * len(thresholds)
-    for t_id, t in enumerate(thresholds):
+    f1_scores = []
+    for t in thresholds:
+        preds = []
         for output, label in outs:
             pred = (output >= t).long()
-            outss[t_id].append([pred, label])
-    f1_scores = [calculate_f1score(outs) for outs in outss]
+            preds.append([pred, label])
+        f1_scores.append(calculate_f1score(preds))
+    print(f1_scores)
     best_t = thresholds[np.argmax(f1_scores)]
     return max(f1_scores)
 #
@@ -44,7 +46,7 @@ def evaluate_acc(outs):
     accs = []
     total_num = 0
     for output, label in outs:
-        pred = (output >=0.5).long()
+        pred = (output >= 0.5).long()
         pred = pred.cpu().numpy()
         label = label.cpu().numpy()
         accs.append(sum([int(pred[i] == label[i]) for i in range(len(pred))]))
