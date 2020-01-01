@@ -75,25 +75,88 @@ class Amplify(dataset):
                 self.values[i] = torch.from_numpy(spec.generate_anomaly_score(self.values[i].numpy())).float()
 
 
-def get_dataloader(batch_size=64, rate=0.4, split=0.9, use_sr=False, normalize=True):
-    data = dataset(normalize)
-    train_size = int(len(data) * split)
+# noinspection PyMissingConstructor
+class GANTrainData(dataset):
+    def __init__(self, train, use_sr=False):
+        value, label = train
+        index = label.eq(0).nonzero().squeeze()
+        self.values = value[index].float()
+        self.labels = label[index]
 
-    test_size = len(data) - train_size
-    train_set, test_set = random_split(data, [train_size, test_size])
-    train_set = Amplify(train_set.dataset[np.array(train_set.indices)], rate=rate, use_sr=use_sr)
-    test_set = Amplify(test_set.dataset[np.array(test_set.indices)], rate=0, use_sr=use_sr)
-    # TODO
-    # with open('data/test.pl', 'wb') as f:
-    #     pickle.dump(test_set, f)
-    # with open('data/test.pl', 'rb') as f:
-    #     test_set = pickle.load(f)
+        if use_sr:
+            print('Using SR, get yourself a cup of shit.')
+            from SR.silency import Silency
+            amp_window_size = 4  # less than period
+            series_window_size = 4  # (maybe) as same as period
+            score_window_size = 16  # a number enough larger than period
+            spec = Silency(amp_window_size, series_window_size, score_window_size)
+            for i in range(len(self)):
+                self.values[i] = torch.from_numpy(spec.generate_anomaly_score(self.values[i].numpy())).float()
 
+
+# noinspection PyMissingConstructor
+class GANTestData(dataset):
+    def __init__(self, test, contaminate_rate=0.2, use_sr=False):
+        value, label = test
+        normal_index = label.eq(0).nonzero().squeeze()
+        abnormal_index = label.eq(1).nonzero().squeeze()
+        abnormal_cnt = min(int(normal_index.size(0) / (1 - contaminate_rate) * contaminate_rate),
+                           abnormal_index.size(0))
+        normal_cnt = int(abnormal_cnt / contaminate_rate) - abnormal_cnt
+        abnormal_index = abnormal_index[torch.randperm(abnormal_index.size(0))[:abnormal_cnt]]
+        normal_index = normal_index[torch.randperm(normal_index.size(0))[:normal_cnt]]
+        all_index = torch.cat([abnormal_index, normal_index])
+        all_index = all_index[torch.randperm(all_index.size(0))]
+        self.values = value[all_index]
+        self.labels = label[all_index]
+
+        if use_sr:
+            print('Using SR, get yourself a cup of shit.')
+            from SR.silency import Silency
+            amp_window_size = 4  # less than period
+            series_window_size = 4  # (maybe) as same as period
+            score_window_size = 16  # a number enough larger than period
+            spec = Silency(amp_window_size, series_window_size, score_window_size)
+            for i in range(len(self)):
+                self.values[i] = torch.from_numpy(spec.generate_anomaly_score(self.values[i].numpy())).float()
+
+
+def show_stat(train_set, test_set):
     print("Total Stat: ", sum(train_set.labels).item() + sum(test_set.labels).item(), len(train_set) + len(test_set),
           "Negative Rate: ",
           1 - (sum(train_set.labels).item() - sum(test_set.labels).item()) / (len(train_set) + len(test_set)))
     print("Train Size: ", len(train_set), " Negative Rate: ", 1 - sum(train_set.labels).item() / len(train_set))
     print("Test Size: ", len(test_set), " Negative Rate: ", 1 - sum(test_set.labels).item() / len(test_set))
+
+
+def get_dataloader(batch_size=64, rate=0.4, split=0.9, use_sr=False, normalize=True):
+    data = dataset(normalize)
+    train_size = int(len(data) * split)
+    test_size = len(data) - train_size
+    train_set, test_set = random_split(data, [train_size, test_size])
+    train_set = Amplify(train_set.dataset[np.array(train_set.indices)], rate=rate, use_sr=use_sr)
+    test_set = Amplify(test_set.dataset[np.array(test_set.indices)], rate=rate, use_sr=use_sr)
+    # TODO
+    # with open('data/test.pl', 'wb') as f:
+    #     pickle.dump(test_set, f)
+    # with open('data/test.pl', 'rb') as f:
+    #     test_set = pickle.load(f)
+    show_stat(train_set, test_set)
+
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=4)
+    return train_loader, test_loader
+
+
+def get_gan_data(batch_size=64, contaminate_rate=0.2, split=0.8, use_sr=False, normalize=True):
+    data = dataset(normalize)
+    train_size = int(len(data) * split)
+    test_size = len(data) - train_size
+    train_set, test_set = random_split(data, [train_size, test_size])
+    train_set = GANTrainData(train_set.dataset[np.array(train_set.indices)], use_sr=use_sr)
+    test_set = GANTestData(test_set.dataset[np.array(test_set.indices)], contaminate_rate=contaminate_rate,
+                           use_sr=use_sr)
+    show_stat(train_set, test_set)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=4)
@@ -101,8 +164,9 @@ def get_dataloader(batch_size=64, rate=0.4, split=0.9, use_sr=False, normalize=T
 
 
 if __name__ == '__main__':
-    train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=False, normalize=True)
-    for data in train:
-        print(data[0].shape)  # [batch, 60]
-        print(data[1].shape)  # [batch]
-        exit()
+    train, test = get_gan_data(batch_size=512, contaminate_rate=0.5, split=0.9, use_sr=False, normalize=True)
+    # train, test = get_dataloader(batch_size=512, rate=0.4, split=0.9, use_sr=False, normalize=True)
+    # for data in train:
+    #     print(data[0].shape)  # [batch, 60]
+    #     print(data[1].shape)  # [batch]
+    #     exit()
