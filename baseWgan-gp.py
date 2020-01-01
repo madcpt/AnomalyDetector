@@ -36,7 +36,7 @@ class discriminator(nn.Module):
                 nn.Linear(128 ,24),
                 nn.Tanh(),
                 nn.Linear(24,1),
-                #nn.Sigmoid(),
+                nn.Sigmoid(),
                 )
 
     def forward(self,x):
@@ -135,7 +135,7 @@ if __name__ == "__main__":
             mone=-1*one.to(device)
             output = netD(x)
             output.backward(one)
-         
+
 
             batch_size = x.shape[0]
             noise = torch.randn(batch_size,1,4,device = device)
@@ -143,7 +143,8 @@ if __name__ == "__main__":
             output1 = netD(fake.detach())
             output1.backward(mone)
             netD.zero_grad()
-
+            
+           # output.state
 
             #train with penalty
             penalty = cal_gradient_penalty(netD,x,fake.detach(),batch_size,device)
