@@ -38,7 +38,7 @@ def evaluate_f1score_threshold(outs, bg=0, ed=0.6, step=0.06):
             pred = (output >= t).long()
             preds.append([pred, label])
         f1_scores.append(calculate_f1score(preds))
-    print(f1_scores)
+    # print(f1_scores)
     best_t = thresholds[np.argmax(f1_scores)]
     return max(f1_scores)
 
