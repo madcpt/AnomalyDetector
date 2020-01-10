@@ -61,10 +61,12 @@ import torch
 from sklearn.metrics import roc_curve, auc, average_precision_score, f1_score
 
 
-def normalize_and_get_f1_score(labels, scores, threshold=0.2):
+def normalize_and_get_f1_score(labels, scores, bg=0.05, ed=0.90, step=0.05):
     # print(scores)
     scores = (scores - torch.min(scores)) / (torch.max(scores) - torch.min(scores))
-    scores[scores >= threshold] = 0
-    scores[scores < threshold] = 1
-    # exit()
-    return f1_score(labels, scores)
+    thresholds = np.arange(bg, ed, step=step)
+    f1_scores = []
+    for threshold in thresholds:
+        scores_ = (scores < threshold).long().cpu()
+        f1_scores.append(f1_score(labels, scores_))
+    return max(f1_scores)

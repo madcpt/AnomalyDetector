@@ -34,7 +34,7 @@ class SRCNN(nn.Module):
                                   # nn.MaxPool1d(kernel_size=2, stride=2),
                                   ).to(device)
 
-        self.classifier = nn.Sequential(nn.Linear(128, 32), nn.Tanh(), nn.Linear(32, 4)).to(device)
+        self.classifier = nn.Sequential(nn.Linear(128, 32), nn.Tanh(), nn.Linear(32, 2)).to(device)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
 
@@ -64,7 +64,7 @@ class SRCNN(nn.Module):
         pred = torch.sigmoid(pred).squeeze(dim=-1)
         return pred
 
-    def run_epoch(self, dataset, train=True):
+    def run_epoch(self, dataset, train=True, draw=False):
         if train:
             self.train()
         else:
@@ -85,6 +85,13 @@ class SRCNN(nn.Module):
             tn += ((pred == y) & (pred != 1)).sum().item()
             fp += ((pred != y) & (pred == 1)).sum().item()
             fn += ((pred != y) & (pred != 1)).sum().item()
+            fp_ = (pred != y) & (pred == 1)
+            if draw:
+                for i, ti in enumerate(fp_):
+                    if ti == 1:
+                        print(x[i])
+                        print(y[i])
+                        exit()
         cnt = tp + tn + fp + fn
         precision = tp / (tp + fp)
         recall = tp / (tp + fn)
@@ -101,16 +108,15 @@ if __name__ == '__main__':
     print(device)
 
     config = clstm_config()
-    train, test = get_dataloader(config.batch_size, rate=0.1, split=0.9, use_sr=False, normalize=True)
+    train, test = get_dataloader(config.batch_size, rate=0.1, split=0.7, use_sr=False, normalize=True)
 
     model = SRCNN(device)
     model = model
     print(model)
 
-    print('test: ', model.run_epoch(test, False))
     for epoch in range(100):
-        print('epoch %d:' % epoch)
+        print('epoch %d:' % epoch, end=' ')
         # train
-        print('train: ', model.run_epoch(train, True))
+        model.run_epoch(train, True)
         # test
-        print('test: ', model.run_epoch(test, False))
+        print('test: ', model.run_epoch(test, False, epoch==10))

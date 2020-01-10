@@ -104,7 +104,7 @@ if __name__ == '__main__':
     print(device)
 
     config = clstm_config()
-    train, test = get_dataloader(config.batch_size, rate=0.4, split=0.9, use_sr=False, normalize=True)
+    train, test = get_dataloader(config.batch_size, rate=0.4, split=0.8, use_sr=False, normalize=True)
 
     model = SRCNN(device)
     model = model

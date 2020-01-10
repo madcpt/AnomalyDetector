@@ -118,7 +118,7 @@ class GANomaly(nn.Module):
         self.l_con = nn.L1Loss()
         self.l_enc = l2_loss
         self.l_bce = nn.BCELoss()
-        self.lr = 0.0001
+        self.lr = 0.00001
         self.l1 = l1_loss_lyt
         self.optimizerD = optim.Adam(self.netD.parameters(), lr=self.lr)
         self.optimizerG = optim.Adam(self.netG.parameters(), lr=self.lr)
@@ -190,7 +190,22 @@ if __name__ == "__main__":
     # network.optimize_params(x)
 
     # Test the network with discriminator
-    train, test = get_gan_data(batch_size=512, contaminate_rate=0.2, split=0.9, use_sr=False, normalize=True)
+    train, test = get_gan_data(batch_size=512, contaminate_rate=0.4, split=0.8, use_sr=False, normalize=True)
+
+    network.eval()
+    X, Y = [], []
+    for x, y in test:
+        x = x.unsqueeze(dim=1).float().to(device)
+        network.optimize_params(x, False)
+        X.append(network.score.cpu().detach())
+        Y.append(y)
+    X = torch.cat(X, dim=0).squeeze()
+    Y = torch.cat(Y, dim=0)
+    # print(X.shape)
+    # print(Y.shape)
+    f1 = normalize_and_get_f1_score(Y, X)
+    print(f1)
+
     for epoch in range(100):
         network.train()
         for x, y in train:
@@ -209,5 +224,6 @@ if __name__ == "__main__":
         Y = torch.cat(Y, dim=0)
         # print(X.shape)
         # print(Y.shape)
-        f1 = normalize_and_get_f1_score(Y, X, threshold=0.3)
+        f1 = normalize_and_get_f1_score(Y, X)
+        # f1s = evaluate_f1score_threshold
         print(f1)
