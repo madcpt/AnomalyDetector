@@ -65,7 +65,7 @@ class Amplify(dataset):
                 self.values[i][index] += (sum(X[index + 1:]) + np.mean(X)) * (1 + np.var(X)) * np.random.normal(0, 1)
                 self.labels[i] = True
         if use_sr:
-            print('Using SR, get yourself a cup of shit.')
+            print('Using SR.')
             from SR.silency import Silency
             amp_window_size = 4  # less than period
             series_window_size = 4  # (maybe) as same as period
@@ -84,7 +84,7 @@ class GANTrainData(dataset):
         self.labels = label[index]
 
         if use_sr:
-            print('Using SR, get yourself a cup of shit.')
+            print('Using SR.')
             from SR.silency import Silency
             amp_window_size = 4  # less than period
             series_window_size = 4  # (maybe) as same as period
